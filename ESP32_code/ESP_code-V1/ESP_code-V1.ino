@@ -20,7 +20,7 @@ BH1750 lightMeter;
 #include <ESP32Servo.h>
 #include <analogWrite.h>
 #include "DHT.h"
-#define DHTPIN 4
+#define DHTPIN 23
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -30,13 +30,17 @@ DHT dht(DHTPIN, DHTTYPE);
 
 const int AirValue = 790;   
 const int WaterValue = 390;  
-const int SensorPin = 36;
+const int SensorPin = 34;
 int soilMoistureValue;
 int soilmoisturepercent=0;
 
 Servo servo1;
-int pos = 0;
-int servo1Pin = 0;
+Servo servo2;
+int pos;
+int servo1Pin = 4;
+int servo2Pin = 32;
+
+int arm=0;
 
 #define BLYNK_PRINT Serial
 
@@ -116,13 +120,21 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   Blynk.begin(auth, ssid, pass);
-  timer.setInterval(1000L, sendSoil);
   timer.setInterval(1000L, sendSensor);
   timer.setInterval(1000L, sendUptime);
   Wire.begin();
 
   lightMeter.begin();
   dht.begin();
+
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  servo1.setPeriodHertz(50); 
+  servo1.attach(servo1Pin);
+  servo2.setPeriodHertz(50); 
+  servo2.attach(servo2Pin);  
  
 }
 BLYNK_WRITE(V8) {
@@ -149,6 +161,30 @@ BLYNK_WRITE(V14) {
     servo1.write(pos);    // tell servo to go to position in variable 'pos'
     delay(20);
     }
+}
+
+BLYNK_WRITE(V13) {
+  arm = param.asInt();
+  if(arm==1)
+  {
+  int i;
+  servo2.write(0);
+  for(i=0;i<=180;i+=3)
+  {
+    servo2.write(i);    // tell servo to go to position in variable 'pos'
+    delay(80);
+    }
+    delay(2000);
+    sendSoil();
+    delay(2000);
+  for(i=180;i>0;i-=3)
+  {
+    servo2.write(i);
+    delay(80);
+  }  
+  servo2.write(0); 
+  } 
+  
 }
  
 

@@ -11,6 +11,9 @@ int IN4= 13;
 int speed1 =0;
 int speed2=0;
 
+int hum=0;
+int temp=0;
+
 #define BLYNK_PRINT Serial
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
@@ -30,6 +33,14 @@ BLYNK_WRITE(V6)
 BLYNK_WRITE(V7)
 {
   fan = param.asInt();
+}
+BLYNK_WRITE(V3)
+{
+  hum = param.asInt();
+}
+BLYNK_WRITE(V2)
+{
+  temp = param.asInt();
 }
 void setup()
 {
@@ -118,5 +129,15 @@ void loop()
   Blynk.run();
   airFlow();
   pumping();
+  if(temp>40||hum>90)
+  {
+        analogWrite(ENB, 250);
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+        delay(5000);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, LOW);
+        
+   }
   
 }

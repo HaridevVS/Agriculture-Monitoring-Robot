@@ -20,7 +20,7 @@ BH1750 lightMeter;
 #include <ESP32Servo.h>
 #include <analogWrite.h>
 #include "DHT.h"
-#define DHTPIN 4
+#define DHTPIN 23
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -30,13 +30,21 @@ DHT dht(DHTPIN, DHTTYPE);
 
 const int AirValue = 790;   
 const int WaterValue = 390;  
-const int SensorPin = 36;
+const int SensorPin = 34;
 int soilMoistureValue;
 int soilmoisturepercent=0;
 
 Servo servo1;
-int pos = 0;
-int servo1Pin = 0;
+Servo servo2;
+int pos;
+int servo1Pin = 4;
+int servo2Pin = 32;
+
+int arm=0;
+int a1=0;
+int a2=0;
+int a3=0;
+int loc=0;
 
 #define BLYNK_PRINT Serial
 
@@ -116,13 +124,22 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   Blynk.begin(auth, ssid, pass);
-  timer.setInterval(1000L, sendSoil);
   timer.setInterval(1000L, sendSensor);
   timer.setInterval(1000L, sendUptime);
   Wire.begin();
 
   lightMeter.begin();
   dht.begin();
+
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  servo1.setPeriodHertz(50); 
+  servo1.attach(servo1Pin);
+  servo2.setPeriodHertz(50); 
+  servo2.attach(servo2Pin);  
+  servo1.write(95);
  
 }
 BLYNK_WRITE(V8) {
@@ -140,7 +157,87 @@ BLYNK_WRITE(V10) {
 BLYNK_WRITE(V11) {
   right = param.asInt();
 }
-
+BLYNK_WRITE(V15){
+  a1=param.asInt();
+  if(a1==1)
+  { 
+    loc=1;
+    Speed=170;
+    carforward();
+    delay(1700);
+    carturnright();
+    delay(600);
+    carforward();
+    delay(1250);
+    carStop();
+    carturnright();
+    delay(617);
+    carforward();
+    delay(750);
+    carStop();
+    }
+  }
+  BLYNK_WRITE(V16){
+  a2=param.asInt();
+  if(a2==1)
+  {
+    if(loc==1)
+  { 
+    loc=2;
+    Speed=170;
+    carbackward();
+    delay(750);
+    carturnleft();
+    delay(650);
+    carforward();
+    delay(1440);
+    carturnright();
+    delay(590);
+    carforward();
+    delay(700);
+    carStop();
+    }
+    if (loc==0){
+      loc=2;
+      carforward();
+      delay(1700);
+      carturnright();
+      delay(590);
+      carforward();
+      delay(2500);
+      carturnright();
+      delay(590);
+      carforward();
+      delay(750);
+      carStop();
+      }
+    }
+    
+  }
+  BLYNK_WRITE(V17){
+  int t;
+  a3=param.asInt();
+  if(a3==1)
+  { 
+    if(loc==1)
+      t=1250;
+    if(loc==2)
+      t=2500;
+    Speed=170;
+    carbackward();
+    delay(750);
+    carturnleft();
+    delay(650);
+    carbackward();
+    delay(t);
+    carturnleft();
+    delay(650);
+    carbackward();
+    delay(1700);
+    carStop();
+    loc=0;
+    }
+  }
 BLYNK_WRITE(V14) {
   pos = param.asInt();
   int i;
@@ -149,6 +246,30 @@ BLYNK_WRITE(V14) {
     servo1.write(pos);    // tell servo to go to position in variable 'pos'
     delay(20);
     }
+}
+
+BLYNK_WRITE(V13) {
+  arm = param.asInt();
+  if(arm==1)
+  {
+  int i;
+  servo2.write(0);
+  for(i=0;i<=180;i+=3)
+  {
+    servo2.write(i);    // tell servo to go to position in variable 'pos'
+    delay(80);
+    }
+    delay(2000);
+    sendSoil();
+    delay(2000);
+  for(i=180;i>0;i-=3)
+  {
+    servo2.write(i);
+    delay(80);
+  }  
+  servo2.write(0); 
+  } 
+  
 }
  
 
@@ -219,5 +340,5 @@ void loop() {
   if(power==1){
   smartcar();
   }
-  delay(5); 
+  delay(10); 
   }
